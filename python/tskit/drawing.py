@@ -269,10 +269,9 @@ def draw_tikz(
     if aspect is None:
         aspect = 1
     if style is None:
-        style = ""
-    else:
-        # hack to avoid empty line in tikzpicture options (which causes problems)
-        style = "\n" + style
+        # We use a tex comment to avoid an empty line in the tikz options field
+        # (as that would be a syntax error).
+        style = "%"
     order = check_order(order)
 
     template = textwrap.dedent(
@@ -284,39 +283,31 @@ def draw_tikz(
             },
             node/.style = {
                 circle,
+                inner sep=0,
+            },
+            empty node/.style = {
+                node,
                 fill=black,
                 line width=0,  % border
                 % radius
                 minimum size=2,
-                inner sep=0,
             },
-            node text/.style = {
-                %font=\bfseries,
-            },
-            left node text/.style = {
-                node text,
-                above left=.1,
-            },
-            right node text/.style = {
-                node text,
-                above right=.1,
-            },
-            leaf node text/.style = {
-                node text,
-                below=.1,
-            },
-            % User customisation goes here. $user_style_text
+            % User customisation goes here.
+            $user_style_text
         ]
-            \foreach \name/\x/\y in {$node_coords}
-                \node[node] (\name) at (\x, \y) {};
-            \foreach \a/\b in {$edges}
-                \path[edge] (\a) |- (\b);
-            \foreach \name/\text in {$leaf_nodes_text}
-                \node[leaf node text] at (\name) {\text};
-            \foreach \name/\text in {$left_nodes_text}
-                \node[left node text] at (\name) {\text};
-            \foreach \name/\text in {$right_nodes_text}
-                \node[right node text] at (\name) {\text};
+            \foreach \name/\x/\y/\text in {
+                $node_coords%
+            } {
+                \ifx\empty\text{
+                    \node[empty node] (\name) at (\x, \y) {};
+                }\else{
+                    \node[node] (\name) at (\x, \y) {\text};
+                }\fi
+            }
+            \foreach \child/\parent in {
+                $edges%
+            }
+                \path[edge] (\child) |- (\parent);
         \end{tikzpicture}"""
     )
 
@@ -345,49 +336,34 @@ def draw_tikz(
             for i, node in enumerate(nodes, 1)
         }
     elif tree_height_scale == "log_time":
-        y_coords = {node: math.log(1+y) for node, y in y_coords.items()}
+        y_coords = {node: math.log(1 + y) for node, y in y_coords.items()}
     elif tree_height_scale != "time":
         raise ValueError(f"unknown tree_height_scale={tree_height_scale}")
 
-    node_coords = [
-        f"n{node}/{x_coords[node]}/{y_coords[node]}" for node in tree.nodes()
-    ]
-
-    # partition node labels into leaves, left sib, or right sib.
-    leaf_nodes_text = []
-    left_nodes_text = []
-    right_nodes_text = []
-    for node, label in node_labels.items():
-        x = f"n{node}/{label}"
-        if tree.is_leaf(node):
-            leaf_nodes_text.append(x)
-        elif tree.left_sib(node) == NULL:
-            left_nodes_text.append(x)
-        elif tree.right_sib(node) == NULL:
-            right_nodes_text.append(x)
-        else:
-            raise RuntimeError("XXX: where to place node label on n-ary tree?")
+    node_coords = []
+    for node in tree.nodes():
+        x = rnd(x_coords[node])
+        y = rnd(y_coords[node])
+        text = node_labels.get(node, "")
+        node_coords.append(f"n{node}/{x}/{y}/{text}")
 
     if scale is None:
-        # This looks sane for 10, 100, or 1000 leaves.
-        scale = math.log(num_leaves)
+        # XXX: this is a bad heuristic when using node labels on internal nodes
+        scale = 4 * math.log(num_leaves)
+
+    wrapper = textwrap.TextWrapper(subsequent_indent=" " * 8)
 
     output = string.Template(template).substitute(
         scale=scale,
-        node_coords=", ".join(node_coords),
-        edges=", ".join(edges),
-        leaf_nodes_text=", ".join(leaf_nodes_text),
-        left_nodes_text=", ".join(left_nodes_text),
-        right_nodes_text=", ".join(right_nodes_text),
+        node_coords=wrapper.fill(", ".join(node_coords)),
+        edges=wrapper.fill(", ".join(edges)),
         user_style_text=style,
     )
 
     if standalone:
         output = (
             "\\documentclass[tikz,border=1mm]{standalone}\n"
-            "\\begin{document}\n"
-            + output +
-            "\n\\end{document}\n"
+            "\\begin{document}\n" + output + "\n\\end{document}\n"
         )
 
     return output
