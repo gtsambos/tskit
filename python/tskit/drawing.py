@@ -26,6 +26,8 @@ Module responsible for visualisations.
 import collections
 import math
 import numbers
+import string
+import textwrap
 
 import numpy as np
 import svgwrite
@@ -74,7 +76,7 @@ def check_format(format):  # noqa A002
     if format is None:
         format = "SVG"  # noqa A001
     fmt = format.lower()
-    supported_formats = ["svg", "ascii", "unicode"]
+    supported_formats = ["svg", "ascii", "unicode", "tikz"]
     if fmt not in supported_formats:
         raise ValueError(
             "Unknown format '{}'. Supported formats are {}".format(
@@ -193,6 +195,29 @@ def draw_tree(
         )
         return tree.drawing.tostring()
 
+    elif fmt == "tikz":
+        if width is not None:
+            raise ValueError("Tikz trees do not support width")
+        if height is not None:
+            raise ValueError("Tikz trees do not support height")
+        if mutation_labels is not None:
+            raise ValueError("Tikz trees do not support mutation_labels")
+        if mutation_colours is not None:
+            raise ValueError("Tikz trees do not support mutation_colours")
+        if node_colours is not None:
+            raise ValueError("Tikz trees do not support node_colours")
+        if edge_colours is not None:
+            raise ValueError("Tikz trees do not support edge_colours")
+        if max_tree_height is not None:
+            raise ValueError("Tikz trees do not support max_tree_height")
+
+        return draw_tikz(
+            tree,
+            node_labels=node_labels,
+            tree_height_scale=tree_height_scale,
+            order=order,
+        )
+
     else:
         if width is not None:
             raise ValueError("Text trees do not support width")
@@ -219,6 +244,141 @@ def draw_tree(
             order=order,
         )
         return str(text_tree)
+
+
+def draw_tikz(
+    tree,
+    node_labels=None,
+    tree_height_scale=None,
+    order=None,
+    aspect=None,
+    scale=None,
+    style=None,
+):
+    """
+    Return a string containing latex/tikz commands to draw a tskit.Tree.
+
+    Save the string to a file (e.g. tree.tex) and include it in your latex
+    document with ``\input{tree.tex}``.
+    """
+    if node_labels is None:
+        node_labels = {node: str(node) for node in tree.nodes()}
+    if tree_height_scale is None:
+        tree_height_scale = "rank"
+    if aspect is None:
+        aspect = 1
+    if style is None:
+        style = ""
+    else:
+        # hack to avoid empty line in tikzpicture options (which causes problems)
+        style = "\n" + style
+    order = check_order(order)
+
+    template = textwrap.dedent(
+        r"""\begin{tikzpicture}[
+            scale=$scale,
+            edge/.style = {
+                draw=black,
+            },
+            node/.style = {
+                circle,
+                fill=black,
+                line width=0,  % border
+                % radius
+                minimum size=2,
+                inner sep=0,
+            },
+            node text/.style = {
+                %font=\bfseries,
+            },
+            left node text/.style = {
+                node text,
+                above left=.1,
+            },
+            right node text/.style = {
+                node text,
+                above right=.1,
+            },
+            leaf node text/.style = {
+                node text,
+                below=.1,
+            },
+            % User customisation goes here. $user_style_text
+        ]
+            \foreach \name/\x/\y in {$node_coords}
+                \node[node] (\name) at (\x, \y) {};
+            \foreach \a/\b in {$edges}
+                \path[edge] (\a) |- (\b);
+            \foreach \name/\text in {$leaf_nodes_text}
+                \node[leaf node text] at (\name) {\text};
+            \foreach \name/\text in {$left_nodes_text}
+                \node[left node text] at (\name) {\text};
+            \foreach \name/\text in {$right_nodes_text}
+                \node[right node text] at (\name) {\text};
+        \end{tikzpicture}"""
+    )
+
+    root_time = tree.time(tree.root)
+    num_leaves = sum(1 for _ in tree.leaves())
+    leaf_x_inc = aspect / num_leaves
+    leaf_x = 0
+    edges = []
+    x_coords = dict()
+    y_coords = dict()
+    for node in tree.nodes(order=order):
+        if tree.is_leaf(node):
+            x = leaf_x
+            leaf_x += leaf_x_inc
+        else:
+            edges.extend([f"n{u}/n{node}" for u in tree.children(node)])
+            children_x = [x_coords[u] for u in tree.children(node)]
+            x = (children_x[0] + children_x[-1]) / 2
+        x_coords[node] = x
+        y_coords[node] = tree.time(node) / root_time
+
+    if tree_height_scale == "rank":
+        nodes = sorted(y_coords.keys(), key=y_coords.__getitem__)
+        y_coords = {
+            node: (i - num_leaves) / num_leaves if i > num_leaves else 0
+            for i, node in enumerate(nodes, 1)
+        }
+    elif tree_height_scale == "log_time":
+        y_coords = {node: math.log(1+y) for node, y in y_coords.items()}
+    elif tree_height_scale != "time":
+        raise ValueError(f"unknown tree_height_scale={tree_height_scale}")
+
+    node_coords = [
+        f"n{node}/{x_coords[node]}/{y_coords[node]}" for node in tree.nodes()
+    ]
+
+    # partition node labels into leaves, left sib, or right sib.
+    leaf_nodes_text = []
+    left_nodes_text = []
+    right_nodes_text = []
+    for node, label in node_labels.items():
+        x = f"n{node}/{label}"
+        if tree.is_leaf(node):
+            leaf_nodes_text.append(x)
+        elif tree.left_sib(node) == NULL:
+            left_nodes_text.append(x)
+        elif tree.right_sib(node) == NULL:
+            right_nodes_text.append(x)
+        else:
+            raise RuntimeError("XXX: where to place node label on n-ary tree?")
+
+    if scale is None:
+        # This looks sane for 10, 100, or 1000 leaves.
+        scale = math.log(num_leaves)
+
+    return string.Template(template).substitute(
+        scale=scale,
+        node_coords=", ".join(node_coords),
+        edges=", ".join(edges),
+        leaf_nodes_text=", ".join(leaf_nodes_text),
+        left_nodes_text=", ".join(left_nodes_text),
+        right_nodes_text=", ".join(right_nodes_text),
+        user_style_text=style,
+    )
 
 
 class SvgTreeSequence:
