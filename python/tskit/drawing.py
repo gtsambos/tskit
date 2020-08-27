@@ -254,6 +254,7 @@ def draw_tikz(
     aspect=None,
     scale=None,
     style=None,
+    standalone=False,
 ):
     """
     Return a string containing latex/tikz commands to draw a tskit.Tree.
@@ -275,7 +276,8 @@ def draw_tikz(
     order = check_order(order)
 
     template = textwrap.dedent(
-        r"""\begin{tikzpicture}[
+        r"""
+        \begin{tikzpicture}[
             scale=$scale,
             edge/.style = {
                 draw=black,
@@ -370,7 +372,7 @@ def draw_tikz(
         # This looks sane for 10, 100, or 1000 leaves.
         scale = math.log(num_leaves)
 
-    return string.Template(template).substitute(
+    output = string.Template(template).substitute(
         scale=scale,
         node_coords=", ".join(node_coords),
         edges=", ".join(edges),
@@ -379,6 +381,16 @@ def draw_tikz(
         right_nodes_text=", ".join(right_nodes_text),
         user_style_text=style,
     )
+
+    if standalone:
+        output = (
+            "\\documentclass[tikz,border=1mm]{standalone}\n"
+            "\\begin{document}\n"
+            + output +
+            "\n\\end{document}\n"
+        )
+
+    return output
 
 
 class SvgTreeSequence:

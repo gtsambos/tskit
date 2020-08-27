@@ -1588,6 +1588,7 @@ class Tree:
         aspect=None,
         scale=None,
         style=None,
+        standalone=False,
     ):
         """
         TODO: docstrings.
@@ -1600,6 +1601,7 @@ class Tree:
             aspect=aspect,
             scale=scale,
             style=style,
+            standalone=standalone,
         )
         if path is not None:
             with open(path, "w") as f:
