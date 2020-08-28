@@ -1589,6 +1589,7 @@ class Tree:
         scale=None,
         style=None,
         standalone=False,
+        to_terminal=False
     ):
         """
         TODO: docstrings.
@@ -1602,6 +1603,7 @@ class Tree:
             scale=scale,
             style=style,
             standalone=standalone,
+            to_terminal=to_terminal
         )
         if path is not None:
             with open(path, "w") as f:
