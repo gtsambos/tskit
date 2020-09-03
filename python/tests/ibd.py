@@ -311,10 +311,13 @@ class IbdFinder:
             right = []
             node = []
             # Define numpy array values.
-            for seg in self.ibd_segments[key]:
-                left.append(seg.left)
-                right.append(seg.right)
-                node.append(seg.node)
+            if self.ibd_segments[key] is None:
+                pass
+            else:
+                for seg in self.ibd_segments[key]:
+                    left.append(seg.left)
+                    right.append(seg.right)
+                    node.append(seg.node)
             # Convert lists to numpy arrays.
             left = np.asarray(left, dtype=np.float64)
             right = np.asarray(right, dtype=np.float64)
