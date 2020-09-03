@@ -6547,9 +6547,6 @@ out:
     return ret;
 }
 
-// IBD: add entry for find_ibd as a method of the TableCollection Python class.
-// Will also need to add a way to convert C struct array to a comparable Python object...
-
 static PyObject *
 TableCollection_subset(TableCollection *self, PyObject *args)
 {

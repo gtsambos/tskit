@@ -5533,7 +5533,7 @@ ibd_finder_init_oldest_parents(tsk_ibd_finder_t *self)
 }
 
 static int
-ibd_finder_init(tsk_ibd_finder_t *self, double sequence_length, tsk_id_t *samples,
+ibd_finder_init(tsk_ibd_finder_t *self, tsk_id_t *samples,
     size_t num_samples, tsk_table_collection_t *tables, double min_length,
     double max_time)
 {
@@ -5543,7 +5543,7 @@ ibd_finder_init(tsk_ibd_finder_t *self, double sequence_length, tsk_id_t *sample
     memset(self, 0, sizeof(tsk_ibd_finder_t));
     self->samples = samples;
     self->num_samples = num_samples;
-    self->sequence_length = sequence_length;
+    self->sequence_length = tables->sequence_length;
     self->num_nodes = tables->nodes.num_rows;
     self->tables = tables;
     self->num_pairs = num_samples * (num_samples - 1) / 2;
@@ -5608,13 +5608,12 @@ out:
 // Define a function that runs the ibd_finder. (Wrapper for the other methods)
 int TSK_WARN_UNUSED
 tsk_ibd_finder_init_and_run(tsk_ibd_finder_t *ibd_finder, tsk_table_collection_t *tables,
-    double sequence_length, tsk_id_t *samples, tsk_size_t num_samples, double min_length,
-    double max_time)
+    tsk_id_t *samples, tsk_size_t num_samples, double min_length, double max_time)
 {
     int ret = 0;
 
     ret = ibd_finder_init(
-        ibd_finder, sequence_length, samples, num_samples, tables, min_length, max_time);
+        ibd_finder, samples, num_samples, tables, min_length, max_time);
     if (ret != 0) {
         goto out;
     }

@@ -18,7 +18,7 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
  * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT O©R OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
@@ -2770,7 +2770,7 @@ int tsk_table_collection_link_ancestors(tsk_table_collection_t *self, tsk_id_t *
 /* This is the current IBD C interface */
 int tsk_ibd_finder_free(tsk_ibd_finder_t *self);
 int tsk_ibd_finder_init_and_run(tsk_ibd_finder_t *ibd_finder,
-    tsk_table_collection_t *tables, double sequence_length, tsk_id_t *samples,
+    tsk_table_collection_t *tables, tsk_id_t *samples,
     tsk_size_t num_samples, double min_length, double max_time);
 int tsk_ibd_finder_run(tsk_ibd_finder_t *ibd_finder);
 int tsk_ibd_finder_calculate_ibd(tsk_ibd_finder_t *self, tsk_id_t current_parent);
