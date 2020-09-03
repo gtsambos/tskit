@@ -2773,7 +2773,6 @@ int tsk_ibd_finder_init_and_run(tsk_ibd_finder_t *ibd_finder,
     tsk_table_collection_t *tables, tsk_id_t *samples,
     tsk_size_t num_samples, double min_length, double max_time);
 int tsk_ibd_finder_run(tsk_ibd_finder_t *ibd_finder);
-int tsk_ibd_finder_calculate_ibd(tsk_ibd_finder_t *self, tsk_id_t current_parent);
 void ibd_finder_print_state(tsk_ibd_finder_t *self, FILE *out);
 
 /* JK Here's the interface we want:

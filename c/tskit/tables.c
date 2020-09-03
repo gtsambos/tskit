@@ -5687,6 +5687,75 @@ out:
     return ret;
 }
 
+static int TSK_WARN_UNUSED
+ibd_finder_calculate_ibd(tsk_ibd_finder_t *self, tsk_id_t current_parent)
+{
+    int ret = 0;
+    int j;
+    tsk_segment_t *seg, *seg0, *seg1;
+    double l, r;
+
+    if (self->ancestor_map_head[current_parent] == NULL) {
+        for (j = 0; j != (int) self->segment_queue_size; j++) {
+            seg = &self->segment_queue[j];
+            ret = ibd_finder_add_ancestry(
+                self, current_parent, seg->left, seg->right, seg->node);
+            if (ret != 0) {
+                goto out;
+            }
+        }
+    } else {
+        for (seg0 = self->ancestor_map_head[current_parent]; seg0 != NULL;
+             seg0 = seg0->next) {
+            for (j = 0; j != (int) self->segment_queue_size; j++) {
+                seg1 = &self->segment_queue[j];
+                if (seg0->left > seg1->left) {
+                    l = seg0->left;
+                } else {
+                    l = seg1->left;
+                }
+                if (seg0->right < seg1->right) {
+                    r = seg0->right;
+                } else {
+                    r = seg0->right;
+                }
+
+                if (l < r) {
+                    if (r - l > self->min_length) {
+                        if (seg0->node < seg1->node) {
+                            ret = ibd_finder_find_sample_pair_index(
+                                self, seg0->node, seg1->node);
+                        } else {
+                            ret = ibd_finder_find_sample_pair_index(
+                                self, seg1->node, seg0->node);
+                        }
+                        if (ret != 0) {
+                            goto out;
+                        }
+                        ret = ibd_finder_add_output(
+                            self, l, r, current_parent, self->pair_index);
+                        if (ret != 0) {
+                            goto out;
+                        }
+                    }
+                }
+            }
+        }
+        for (j = 0; j != (int) self->segment_queue_size; j++) {
+            seg = &self->segment_queue[j];
+            ret = ibd_finder_add_ancestry(
+                self, current_parent, seg->left, seg->right, seg->node);
+            if (ret != 0) {
+                goto out;
+            }
+        }
+    }
+    self->segment_queue_size = 0;
+
+out:
+    return ret;
+}
+
 void
 ibd_finder_print_state(tsk_ibd_finder_t *self, FILE *out)
 {
@@ -5797,7 +5866,7 @@ tsk_ibd_finder_run(tsk_ibd_finder_t *self)
 
             // Calculate new ibd segments descending from the current parent.
             if (self->segment_queue_size > 0) {
-                ret = tsk_ibd_finder_calculate_ibd(self, current_parent);
+                ret = ibd_finder_calculate_ibd(self, current_parent);
             }
             if (ret != 0) {
                 goto out;
@@ -5810,7 +5879,7 @@ tsk_ibd_finder_run(tsk_ibd_finder_t *self)
                 if (ret != 0) {
                     goto out;
                 }
-                ret = tsk_ibd_finder_calculate_ibd(self, current_parent);
+                ret = ibd_finder_calculate_ibd(self, current_parent);
                 if (ret != 0) {
                     goto out;
                 }
@@ -5830,75 +5899,6 @@ tsk_ibd_finder_run(tsk_ibd_finder_t *self)
             // }
         }
     }
-
-out:
-    return ret;
-}
-
-int TSK_WARN_UNUSED
-tsk_ibd_finder_calculate_ibd(tsk_ibd_finder_t *self, tsk_id_t current_parent)
-{
-    int ret = 0;
-    int j;
-    tsk_segment_t *seg, *seg0, *seg1;
-    double l, r;
-
-    if (self->ancestor_map_head[current_parent] == NULL) {
-        for (j = 0; j != (int) self->segment_queue_size; j++) {
-            seg = &self->segment_queue[j];
-            ret = ibd_finder_add_ancestry(
-                self, current_parent, seg->left, seg->right, seg->node);
-            if (ret != 0) {
-                goto out;
-            }
-        }
-    } else {
-        for (seg0 = self->ancestor_map_head[current_parent]; seg0 != NULL;
-             seg0 = seg0->next) {
-            for (j = 0; j != (int) self->segment_queue_size; j++) {
-                seg1 = &self->segment_queue[j];
-                if (seg0->left > seg1->left) {
-                    l = seg0->left;
-                } else {
-                    l = seg1->left;
-                }
-                if (seg0->right < seg1->right) {
-                    r = seg0->right;
-                } else {
-                    r = seg0->right;
-                }
-
-                if (l < r) {
-                    if (r - l > self->min_length) {
-                        if (seg0->node < seg1->node) {
-                            ret = ibd_finder_find_sample_pair_index(
-                                self, seg0->node, seg1->node);
-                        } else {
-                            ret = ibd_finder_find_sample_pair_index(
-                                self, seg1->node, seg0->node);
-                        }
-                        if (ret != 0) {
-                            goto out;
-                        }
-                        ret = ibd_finder_add_output(
-                            self, l, r, current_parent, self->pair_index);
-                        if (ret != 0) {
-                            goto out;
-                        }
-                    }
-                }
-            }
-        }
-        for (j = 0; j != (int) self->segment_queue_size; j++) {
-            seg = &self->segment_queue[j];
-            ret = ibd_finder_add_ancestry(
-                self, current_parent, seg->left, seg->right, seg->node);
-            if (ret != 0) {
-                goto out;
-            }
-        }
-    }
-    self->segment_queue_size = 0;
 
 out:
     return ret;
