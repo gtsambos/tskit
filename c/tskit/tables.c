@@ -5575,7 +5575,6 @@ ibd_finder_init(tsk_ibd_finder_t *self, tsk_id_t *samples,
     self->ancestor_map_tail = calloc(num_nodes_alloc, sizeof(tsk_segment_t *));
     self->ibd_segments_head = calloc(self->num_pairs, sizeof(tsk_segment_t *));
     self->ibd_segments_tail = calloc(self->num_pairs, sizeof(tsk_segment_t *));
-    self->pair_index = -1;
     self->sample_id_map = malloc(num_nodes_alloc * sizeof(tsk_id_t));
     self->is_sample = calloc(num_nodes_alloc, sizeof(bool));
     self->segment_queue_size = 0;
@@ -5662,13 +5661,11 @@ static int
 ibd_finder_find_sample_pair_index(
     tsk_ibd_finder_t *self, tsk_id_t sample0, tsk_id_t sample1)
 {
-    int ret = 0;
-    float pair_index;
+    float pair_index = -1;
     size_t index0, index1;
 
     // Ensure the sample pairs are in order.
     if (sample0 >= sample1) {
-        ret = TSK_ERR_GENERIC;
         goto out;
     }
 
@@ -5681,17 +5678,16 @@ ibd_finder_find_sample_pair_index(
 
     // Check the result is an integer before converting it.
     assert(ceilf(pair_index) == pair_index);
-    self->pair_index = (int) pair_index;
 
 out:
-    return ret;
+    return (int) pair_index;
 }
 
 static int TSK_WARN_UNUSED
 ibd_finder_calculate_ibd(tsk_ibd_finder_t *self, tsk_id_t current_parent)
 {
     int ret = 0;
-    int j;
+    int j, pair_index;
     tsk_segment_t *seg, *seg0, *seg1;
     double l, r;
 
@@ -5729,11 +5725,12 @@ ibd_finder_calculate_ibd(tsk_ibd_finder_t *self, tsk_id_t current_parent)
                             ret = ibd_finder_find_sample_pair_index(
                                 self, seg1->node, seg0->node);
                         }
-                        if (ret != 0) {
+                        if (ret < 0) {
                             goto out;
                         }
+                        pair_index = ret;
                         ret = ibd_finder_add_output(
-                            self, l, r, current_parent, self->pair_index);
+                            self, l, r, current_parent, pair_index);
                         if (ret != 0) {
                             goto out;
                         }

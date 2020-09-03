@@ -706,7 +706,6 @@ typedef struct {
     double sequence_length;
     tsk_table_collection_t *tables;
     size_t num_pairs;
-    int pair_index;
     size_t *sample_id_map;
     tsk_segment_t **ibd_segments_head;
     tsk_segment_t **ibd_segments_tail;
