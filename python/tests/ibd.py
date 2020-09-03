@@ -186,11 +186,13 @@ class IbdFinder:
         # self.ibd_segments[index].add(seg)
 
         if self.ibd_segments[self.sample_pairs[index]] is None:
-            self.ibd_segments[self.sample_pairs[index]] = SegmentList(
-                head=seg, tail=seg
-            )
+            self.ibd_segments[self.sample_pairs[index]] = [seg]
+            # self.ibd_segments[self.sample_pairs[index]] = SegmentList(
+            #     head=seg, tail=seg
+            # )
         else:
-            self.ibd_segments[self.sample_pairs[index]].add(seg)
+            # self.ibd_segments[self.sample_pairs[index]].add(seg)
+            self.ibd_segments[self.sample_pairs[index]].append(seg)
 
     def get_sample_pairs(self):
         """
@@ -296,7 +298,29 @@ class IbdFinder:
                     if current_parent == n:
                         self.A[i] = None
 
+        self.convert_output_to_numpy()
+
         return self.ibd_segments
+
+    def convert_output_to_numpy(self):
+        """
+        Converts the output to the format required by the Python-C interface layer.
+        """
+        for key in self.sample_pairs:
+            left = []
+            right = []
+            node = []
+            # Define numpy array values.
+            for seg in self.ibd_segments[key]:
+                left.append(seg.left)
+                right.append(seg.right)
+                node.append(seg.node)
+            # Convert lists to numpy arrays.
+            left = np.asarray(left, dtype=np.float64)
+            right = np.asarray(right, dtype=np.float64)
+            node = np.asarray(node, dtype=np.int64)
+            # Overwrite existing entry.
+            self.ibd_segments[key] = {"left": left, "right": right, "node": node}
 
     def calculate_ibd_segs(self, current_parent, list_to_add):
         """
