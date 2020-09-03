@@ -5550,7 +5550,7 @@ ibd_finder_init(tsk_ibd_finder_t *self, tsk_id_t *samples,
     self->min_length = min_length;
     self->max_time = max_time;
     if (max_time == 0) {
-        self->max_time = 2 * self->tables->nodes.time[self->num_nodes - 1];
+        self->max_time = DBL_MAX;
     }
 
     if (samples == NULL || num_samples == 0 || self->num_pairs < 1) {
