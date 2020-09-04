@@ -126,22 +126,37 @@ class SegmentList:
 class IbdFinder:
     """
     Finds all IBD relationships between specified samples in a tree sequence.
+    One of either sample_pairs or samples must be provided
     """
 
-    def __init__(self, ts, samples=None, min_length=0, max_time=None):
+    def __init__(
+        self, ts, sample_pairs=None, samples=None, min_length=0, max_time=None
+    ):
 
         self.ts = ts
+
         # Note: samples *must* be in order of ascending node ID
-        if samples is None:
-            self.samples = ts.samples()
+
+        if sample_pairs is None:
+            self.compute_all_pairs = True
+            if samples is None:
+                self.samples = ts.samples()
+            else:
+                self.samples = samples
+            if len(self.samples) == 0:
+                raise ValueError("The tree sequence contains no samples.")
+            self.num_samples = len(self.samples)
+            self.sample_pairs = self.get_sample_pairs()
         else:
-            self.samples = samples
-        if len(self.samples) == 0:
-            raise ValueError("The tree sequence contains no samples.")
+            self.compute_all_pairs = False
+            self.sample_pairs = sample_pairs
+            self.check_sample_pairs()
+            self.samples = list({i for pair in self.sample_pairs for i in pair})
 
         self.sample_id_map = np.zeros(ts.num_nodes, dtype=int) - 1
         for index, u in enumerate(self.samples):
             self.sample_id_map[u] = index
+
         self.min_length = min_length
         if max_time is None:
             self.max_time = 2 * ts.max_root_time
@@ -153,8 +168,6 @@ class IbdFinder:
         self.oldest_parent = self.get_oldest_parents()
 
         # Objects below are needed for the IBD segment-holding object.
-        self.num_samples = len(self.samples)
-        self.sample_pairs = self.get_sample_pairs()
 
         # Note: in the C code the object below should be a struct array.
         # Each item will be accessed using its index, which corresponds to a particular
@@ -177,22 +190,43 @@ class IbdFinder:
                 oldest_parents[c] = e.parent
         return oldest_parents
 
-    def add_ibd_segments(self, sample0, sample1, seg):
-        index = self.find_sample_pair_index(sample0, sample1)
+    def add_ibd_segments(self, index, seg):
+        # index = self.find_sample_pair_index(sample0, sample1)
 
         # Note: the code below is specific to the Python implementation, where the
         # output is a dictionary indexed by sample pairs.
         # In the C implementation, it'll be more like
         # self.ibd_segments[index].add(seg)
-
+        assert index != -1
         if self.ibd_segments[self.sample_pairs[index]] is None:
             self.ibd_segments[self.sample_pairs[index]] = [seg]
-            # self.ibd_segments[self.sample_pairs[index]] = SegmentList(
-            #     head=seg, tail=seg
-            # )
         else:
-            # self.ibd_segments[self.sample_pairs[index]].add(seg)
             self.ibd_segments[self.sample_pairs[index]].append(seg)
+
+    def check_sample_pairs(self):
+        """
+        Checks that the user-inputted list of sample pairs is valid.
+        """
+        for ind, p in enumerate(self.sample_pairs):
+            if not isinstance(p, tuple):
+                raise ValueError("Sample pairs must be a list of tuples.")
+            assert len(p) == 2
+            # Assumes the node IDs are 0 ... ts.num_nodes - 1
+            if not (
+                p[0] in range(0, self.ts.num_nodes)
+                and p[1] in range(0, self.ts.num_nodes)
+            ):
+                raise ValueError("Each sample pair must contain valid node IDs.")
+            if p[0] == p[1]:
+                raise ValueError(
+                    "Each sample pair must contain two different node IDs."
+                )
+            # Ensure there are no duplicate pairs.
+            for ind2, p2 in enumerate(self.sample_pairs):
+                if ind == ind2:
+                    continue
+                if p == p2 or (p[1], p[0]) == p2:
+                    raise ValueError("The list of sample pairs contains duplicates.")
 
     def get_sample_pairs(self):
         """
@@ -215,25 +249,37 @@ class IbdFinder:
         sample pair in the struct array.
         """
 
-        # Ensure samples are in order.
-        if sample0 == sample1:
-            raise ValueError("Samples in pair must have different node IDs.")
-        elif sample0 > sample1:
-            sample0, sample1 = sample1, sample0
+        if self.compute_all_pairs:
+            # Ensure samples are in order.
+            if sample0 == sample1:
+                raise ValueError("Samples in pair must have different node IDs.")
+            elif sample0 > sample1:
+                sample0, sample1 = sample1, sample0
 
-        i0 = self.sample_id_map[sample0]
-        i1 = self.sample_id_map[sample1]
+            i0 = self.sample_id_map[sample0]
+            i1 = self.sample_id_map[sample1]
 
-        # Calculate the position of the sample pair in the vector.
-        index = (
-            (self.num_samples) * (self.num_samples - 1) / 2
-            - (self.num_samples - i0) * (self.num_samples - i0 - 1) / 2
-            + i1
-            - i0
-            - 1
-        )
+            # Calculate the position of the sample pair in the vector.
+            index = (
+                (self.num_samples) * (self.num_samples - 1) / 2
+                - (self.num_samples - i0) * (self.num_samples - i0 - 1) / 2
+                + i1
+                - i0
+                - 1
+            )
+        else:
+            index = 0
+            while index < len(self.sample_pairs):
+                if self.sample_pairs[index] == (sample0, sample1) or self.sample_pairs[
+                    index
+                ] == (sample1, sample0):
+                    break
+                index += 1
 
-        return int(index)
+        if index < len(self.sample_pairs):
+            return int(index)
+        else:
+            return -1
 
     def find_ibd_segments(self):
         """
@@ -341,19 +387,22 @@ class IbdFinder:
             while seg0 is not None:
                 seg1 = list_to_add.head
                 while seg1 is not None:
+                    index = self.find_sample_pair_index(seg0.node, seg1.node)
+                    if not self.compute_all_pairs:
+                        if index == -1:
+                            seg1 = seg1.next
+                            continue
                     left = max(seg0.left, seg1.left)
                     right = min(seg0.right, seg1.right)
                     if left >= right:
                         seg1 = seg1.next
                         continue
-                    nodes = [seg0.node, seg1.node]
-                    nodes.sort()
 
                     # If there are any overlapping segments, record as a new
                     # IBD relationship.
                     if right - left > self.min_length:
                         self.add_ibd_segments(
-                            nodes[0], nodes[1], Segment(left, right, current_parent),
+                            index, Segment(left, right, current_parent),
                         )
                     seg1 = seg1.next
                 seg0 = seg0.next
