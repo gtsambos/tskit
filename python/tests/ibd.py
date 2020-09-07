@@ -387,6 +387,9 @@ class IbdFinder:
             while seg0 is not None:
                 seg1 = list_to_add.head
                 while seg1 is not None:
+                    if seg0.node == seg1.node:
+                        seg1 = seg1.next
+                        continue
                     index = self.find_sample_pair_index(seg0.node, seg1.node)
                     if not self.compute_all_pairs:
                         if index == -1:

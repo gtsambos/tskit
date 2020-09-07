@@ -137,7 +137,7 @@ def subtrees_are_equal(tree1, pdict0, root):
     return True
 
 
-def verify_equal_ibd(treeSequence):
+def verify_equal_ibd(treeSequence, sample_pairs=None):
     """
     Calculates IBD segments using both the 'naive' and sophisticated algorithms,
     verifies that the same output is produced.
@@ -146,7 +146,10 @@ def verify_equal_ibd(treeSequence):
     for example.
     """
     ts = treeSequence
-    ibd0 = ibd.IbdFinder(ts, samples=ts.samples())
+    if sample_pairs is None:
+        ibd0 = ibd.IbdFinder(ts, samples=ts.samples())
+    else:
+        ibd0 = ibd.IbdFinder(ts, samples=ts.samples(), sample_pairs=sample_pairs)
     ibd0 = ibd0.find_ibd_segments()
     ibd0 = convert_ibd_output_to_seglists(ibd0)
     ibd1 = get_ibd_all_pairs(ts, path_ibd=True, mrca_ibd=True)
@@ -545,6 +548,7 @@ class TestIbdDifferentPaths(unittest.TestCase):
         ts = self.ts
         ibd_f = ibd.IbdFinder(ts)
         ibd_segs = ibd_f.find_ibd_segments()
+        print(ibd_segs)
         true_segs = {
             (0, 1): [
                 ibd.Segment(0.0, 0.2, 4),
@@ -580,6 +584,21 @@ class TestIbdDifferentPaths(unittest.TestCase):
         ibd_segs = ibd_f.find_ibd_segments()
         true_segs = {(0, 1): [ibd.Segment(0.2, 0.7, 4)]}
         ibd_segs = convert_ibd_output_to_seglists(ibd_segs)
+        assert ibd_is_equal(ibd_segs, true_segs)
+
+    @unittest.expectedFailure
+    def test_input_sample_pairs(self):
+        ibd_f = ibd.IbdFinder(self.ts, sample_pairs=[(0, 1), (2, 3), (1, 3)])
+        ibd_segs = ibd_f.find_ibd_segments()
+        ibd_segs = convert_ibd_output_to_seglists(ibd_segs)
+        true_segs = {
+            (0, 1): [
+                ibd.Segment(0.0, 0.2, 4),
+                ibd.Segment(0.7, 1.0, 4),
+                ibd.Segment(0.2, 0.7, 4),
+            ],
+            (2, 3): [ibd.Segment(0.2, 0.7, 4)],
+        }
         assert ibd_is_equal(ibd_segs, true_segs)
 
 
@@ -666,6 +685,16 @@ class TestIbdPolytomies(unittest.TestCase):
         ibd_segs = convert_ibd_output_to_seglists(ibd_segs)
         assert ibd_is_equal(ibd_segs, true_segs)
 
+    def test_input_sample_pairs(self):
+        ibd_f = ibd.IbdFinder(self.ts, sample_pairs=[(0, 1), (0, 3)])
+        ibd_segs = ibd_f.find_ibd_segments()
+        ibd_segs = convert_ibd_output_to_seglists(ibd_segs)
+        true_segs = {
+            (0, 1): [ibd.Segment(0.0, 1.0, 4)],
+            (0, 3): [ibd.Segment(0.3, 1.0, 4), ibd.Segment(0.0, 0.3, 5)],
+        }
+        assert ibd_is_equal(ibd_segs, true_segs)
+
 
 class TestIbdInternalSamples(unittest.TestCase):
     #
@@ -697,6 +726,15 @@ class TestIbdInternalSamples(unittest.TestCase):
     def test_defaults(self):
         ts = self.ts
         ibd_f = ibd.IbdFinder(ts)
+        ibd_segs = ibd_f.find_ibd_segments()
+        ibd_segs = convert_ibd_output_to_seglists(ibd_segs)
+        true_segs = {
+            (0, 2): [ibd.Segment(0, 1, 3)],
+        }
+        assert ibd_is_equal(ibd_segs, true_segs)
+
+    def test_input_sample_pairs(self):
+        ibd_f = ibd.IbdFinder(self.ts, sample_pairs=[(0, 2)])
         ibd_segs = ibd_f.find_ibd_segments()
         ibd_segs = convert_ibd_output_to_seglists(ibd_segs)
         true_segs = {

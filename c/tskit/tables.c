@@ -5533,9 +5533,8 @@ ibd_finder_init_oldest_parents(tsk_ibd_finder_t *self)
 }
 
 static int
-ibd_finder_init(tsk_ibd_finder_t *self, tsk_id_t *samples,
-    size_t num_samples, tsk_table_collection_t *tables, double min_length,
-    double max_time)
+ibd_finder_init(tsk_ibd_finder_t *self, tsk_id_t *samples, size_t num_samples,
+    tsk_table_collection_t *tables, double min_length, double max_time)
 {
     int ret = 0;
     size_t num_nodes_alloc;

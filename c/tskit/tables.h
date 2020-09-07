@@ -2769,8 +2769,8 @@ int tsk_table_collection_link_ancestors(tsk_table_collection_t *self, tsk_id_t *
 /* This is the current IBD C interface */
 int tsk_ibd_finder_free(tsk_ibd_finder_t *self);
 int tsk_ibd_finder_init_and_run(tsk_ibd_finder_t *ibd_finder,
-    tsk_table_collection_t *tables, tsk_id_t *samples,
-    tsk_size_t num_samples, double min_length, double max_time);
+    tsk_table_collection_t *tables, tsk_id_t *samples, tsk_size_t num_samples,
+    double min_length, double max_time);
 int tsk_ibd_finder_run(tsk_ibd_finder_t *ibd_finder);
 void ibd_finder_print_state(tsk_ibd_finder_t *self, FILE *out);
 
