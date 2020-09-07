@@ -1932,7 +1932,7 @@ int tsk_population_table_dump_text(tsk_population_table_t *self, FILE *out);
 This must be called before any operations are performed on the table.
 See the :ref:`sec_c_api_overview_structure` for details on how objects
 are initialised and freed.
-@endrst
+@endrst©
 
 @param self A pointer to an uninitialised tsk_provenance_table_t object.
 @param options Allocation time options. Currently unused; should be
@@ -2774,6 +2774,10 @@ int tsk_ibd_finder_init_and_run(tsk_ibd_finder_t *ibd_finder,
 int tsk_ibd_finder_run(tsk_ibd_finder_t *ibd_finder);
 void ibd_finder_print_state(tsk_ibd_finder_t *self, FILE *out);
 
+
+// new additions:
+int tsk_ibd_finder_set_min_length(tsk_ibd_finder_t *self, double min_length);
+int tsk_ibd_finder_set_max_time(tsk_ibd_finder_t *self, double max_time);
 /* JK Here's the interface we want:
 
 // sample_pairs must be of length 2 x num_sample_pairs, and each of the

@@ -5533,8 +5533,8 @@ ibd_finder_init_oldest_parents(tsk_ibd_finder_t *self)
 }
 
 static int
-tsk_ibd_finder_init(tsk_ibd_finder_t *self, tsk_id_t *samples, size_t num_samples,
-    tsk_table_collection_t *tables, double min_length, double max_time)
+ibd_finder_init(tsk_ibd_finder_t *self, tsk_id_t *samples, size_t num_samples,
+    tsk_table_collection_t *tables)
 {
     int ret = 0;
     size_t num_nodes_alloc;
@@ -5546,25 +5546,17 @@ tsk_ibd_finder_init(tsk_ibd_finder_t *self, tsk_id_t *samples, size_t num_sample
     self->num_nodes = tables->nodes.num_rows;
     self->tables = tables;
     self->num_pairs = num_samples * (num_samples - 1) / 2;
-    self->min_length = min_length;
-    self->max_time = max_time;
-    if (max_time == 0) {
-        self->max_time = DBL_MAX;
-    }
 
     if (samples == NULL || num_samples == 0 || self->num_pairs < 1) {
         ret = TSK_ERR_NO_SAMPLE_PAIRS;
-        goto out;
-    }
-
-    if (self->min_length < 0 || self->max_time <= 0) {
-        ret = TSK_ERR_BAD_PARAM_VALUE;
+        printf("failure 2");
         goto out;
     }
 
     // Allocate the heaps used for small objects.
     ret = tsk_blkalloc_init(&self->segment_heap, 8192);
     if (ret != 0) {
+        printf("failure 4");
         goto out;
     }
 
@@ -5585,6 +5577,7 @@ tsk_ibd_finder_init(tsk_ibd_finder_t *self, tsk_id_t *samples, size_t num_sample
         || self->sample_id_map == NULL || self->is_sample == NULL
         || self->segment_queue == NULL) {
         ret = TSK_ERR_NO_MEMORY;
+    printf("failure 5");
         goto out;
     }
 
@@ -5593,6 +5586,7 @@ tsk_ibd_finder_init(tsk_ibd_finder_t *self, tsk_id_t *samples, size_t num_sample
     // Initialise the ibd_finder output.
     ret = ibd_finder_init_samples(self, samples);
     if (ret != 0) {
+        printf("failure 6");
         goto out;
     }
 
@@ -5603,74 +5597,30 @@ out:
     return ret;
 }
 
-static int
-ibd_finder_init(tsk_ibd_finder_t *self, tsk_id_t *samples, size_t num_samples,
-    tsk_table_collection_t *tables, double min_length, double max_time)
+int TSK_WARN_UNUSED
+tsk_ibd_finder_set_min_length(tsk_ibd_finder_t *self, double min_length)
 {
     int ret = 0;
-    size_t num_nodes_alloc;
-
-    memset(self, 0, sizeof(tsk_ibd_finder_t));
-    self->samples = samples;
-    self->num_samples = num_samples;
-    self->sequence_length = tables->sequence_length;
-    self->num_nodes = tables->nodes.num_rows;
-    self->tables = tables;
-    self->num_pairs = num_samples * (num_samples - 1) / 2;
     self->min_length = min_length;
-    self->max_time = max_time;
+    if (min_length < 0) {
+        ret = TSK_ERR_BAD_PARAM_VALUE;
+    }
+    return ret;
+}
+
+int TSK_WARN_UNUSED
+tsk_ibd_finder_set_max_time(tsk_ibd_finder_t *self, double max_time)
+{
+    int ret = 0;
+    
     if (max_time == 0) {
         self->max_time = DBL_MAX;
+    } else {
+        self->max_time = max_time;
     }
-
-    if (samples == NULL || num_samples == 0 || self->num_pairs < 1) {
-        ret = TSK_ERR_NO_SAMPLE_PAIRS;
-        goto out;
-    }
-
-    if (self->min_length < 0 || self->max_time <= 0) {
+    if (max_time < 0) {
         ret = TSK_ERR_BAD_PARAM_VALUE;
-        goto out;
     }
-
-    // Allocate the heaps used for small objects.
-    ret = tsk_blkalloc_init(&self->segment_heap, 8192);
-    if (ret != 0) {
-        goto out;
-    }
-
-    // Mallocing and callocing.
-    num_nodes_alloc = 1 + tables->nodes.num_rows;
-    self->ancestor_map_head = calloc(num_nodes_alloc, sizeof(tsk_segment_t *));
-    self->ancestor_map_tail = calloc(num_nodes_alloc, sizeof(tsk_segment_t *));
-    self->ibd_segments_head = calloc(self->num_pairs, sizeof(tsk_segment_t *));
-    self->ibd_segments_tail = calloc(self->num_pairs, sizeof(tsk_segment_t *));
-    self->sample_id_map = malloc(num_nodes_alloc * sizeof(tsk_id_t));
-    self->is_sample = calloc(num_nodes_alloc, sizeof(bool));
-    self->segment_queue_size = 0;
-    self->max_segment_queue_size = 64;
-    self->segment_queue = malloc(self->max_segment_queue_size * sizeof(tsk_segment_t));
-    self->oldest_parent = calloc(num_nodes_alloc, sizeof(tsk_id_t *));
-    if (self->ancestor_map_head == NULL || self->ancestor_map_tail == NULL
-        || self->ibd_segments_head == NULL || self->ibd_segments_tail == NULL
-        || self->sample_id_map == NULL || self->is_sample == NULL
-        || self->segment_queue == NULL) {
-        ret = TSK_ERR_NO_MEMORY;
-        goto out;
-    }
-
-    // Do we need the below? Seems like no?
-    // memset(self->sample_id_map, 0xff, self->tables.nodes.num_rows * sizeof(tsk_id_t));
-    // Initialise the ibd_finder output.
-    ret = ibd_finder_init_samples(self, samples);
-    if (ret != 0) {
-        goto out;
-    }
-
-    // TODO: feels weird not having a return statement for this?
-    ibd_finder_init_oldest_parents(self);
-
-out:
     return ret;
 }
 
@@ -5682,7 +5632,19 @@ tsk_ibd_finder_init_and_run(tsk_ibd_finder_t *ibd_finder, tsk_table_collection_t
     int ret = 0;
 
     ret = ibd_finder_init(
-        ibd_finder, samples, num_samples, tables, min_length, max_time);
+        ibd_finder, samples, num_samples, tables
+        // min_length, max_time
+        );
+    if (ret != 0) {
+        printf("failure 1");
+        goto out;
+    }
+
+    ret = tsk_ibd_finder_set_min_length(ibd_finder, min_length);
+    if (ret != 0) {
+        goto out;
+    }
+    ret = tsk_ibd_finder_set_max_time(ibd_finder, max_time);
     if (ret != 0) {
         goto out;
     }
