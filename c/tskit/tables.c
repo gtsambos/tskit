@@ -5533,6 +5533,77 @@ ibd_finder_init_oldest_parents(tsk_ibd_finder_t *self)
 }
 
 static int
+tsk_ibd_finder_init(tsk_ibd_finder_t *self, tsk_id_t *samples, size_t num_samples,
+    tsk_table_collection_t *tables, double min_length, double max_time)
+{
+    int ret = 0;
+    size_t num_nodes_alloc;
+
+    memset(self, 0, sizeof(tsk_ibd_finder_t));
+    self->samples = samples;
+    self->num_samples = num_samples;
+    self->sequence_length = tables->sequence_length;
+    self->num_nodes = tables->nodes.num_rows;
+    self->tables = tables;
+    self->num_pairs = num_samples * (num_samples - 1) / 2;
+    self->min_length = min_length;
+    self->max_time = max_time;
+    if (max_time == 0) {
+        self->max_time = DBL_MAX;
+    }
+
+    if (samples == NULL || num_samples == 0 || self->num_pairs < 1) {
+        ret = TSK_ERR_NO_SAMPLE_PAIRS;
+        goto out;
+    }
+
+    if (self->min_length < 0 || self->max_time <= 0) {
+        ret = TSK_ERR_BAD_PARAM_VALUE;
+        goto out;
+    }
+
+    // Allocate the heaps used for small objects.
+    ret = tsk_blkalloc_init(&self->segment_heap, 8192);
+    if (ret != 0) {
+        goto out;
+    }
+
+    // Mallocing and callocing.
+    num_nodes_alloc = 1 + tables->nodes.num_rows;
+    self->ancestor_map_head = calloc(num_nodes_alloc, sizeof(tsk_segment_t *));
+    self->ancestor_map_tail = calloc(num_nodes_alloc, sizeof(tsk_segment_t *));
+    self->ibd_segments_head = calloc(self->num_pairs, sizeof(tsk_segment_t *));
+    self->ibd_segments_tail = calloc(self->num_pairs, sizeof(tsk_segment_t *));
+    self->sample_id_map = malloc(num_nodes_alloc * sizeof(tsk_id_t));
+    self->is_sample = calloc(num_nodes_alloc, sizeof(bool));
+    self->segment_queue_size = 0;
+    self->max_segment_queue_size = 64;
+    self->segment_queue = malloc(self->max_segment_queue_size * sizeof(tsk_segment_t));
+    self->oldest_parent = calloc(num_nodes_alloc, sizeof(tsk_id_t *));
+    if (self->ancestor_map_head == NULL || self->ancestor_map_tail == NULL
+        || self->ibd_segments_head == NULL || self->ibd_segments_tail == NULL
+        || self->sample_id_map == NULL || self->is_sample == NULL
+        || self->segment_queue == NULL) {
+        ret = TSK_ERR_NO_MEMORY;
+        goto out;
+    }
+
+    // Do we need the below? Seems like no?
+    // memset(self->sample_id_map, 0xff, self->tables.nodes.num_rows * sizeof(tsk_id_t));
+    // Initialise the ibd_finder output.
+    ret = ibd_finder_init_samples(self, samples);
+    if (ret != 0) {
+        goto out;
+    }
+
+    // TODO: feels weird not having a return statement for this?
+    ibd_finder_init_oldest_parents(self);
+
+out:
+    return ret;
+}
+
+static int
 ibd_finder_init(tsk_ibd_finder_t *self, tsk_id_t *samples, size_t num_samples,
     tsk_table_collection_t *tables, double min_length, double max_time)
 {

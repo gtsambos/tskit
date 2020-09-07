@@ -2851,6 +2851,39 @@ test_link_ancestors_multiple_to_single_tree(void)
     tsk_treeseq_free(&ts);
 }
 
+// static void
+// test_ibd_finder_new(void)
+// {
+//     // sample_pairs must be of length 2 x num_sample_pairs, and each of the
+//     // pairs are adjacent. This corresponds exactly to what we'll get from
+//     // PyArray_DATA() on a 2D numpy array.
+//     int tsk_ibd_finder_init(tsk_ibd_finder_t *ibd_finder,
+//         tsk_table_collection_t *tables, tsk_id_t *sample_pairs,
+//         tsk_size_t num_sample_pairs);
+
+//     // since this will often be set to a default value, we use a setter
+//     // rather then complicating the contructor. Should return an error if
+//     // min_length < 0.
+//     int tsk_ibd_finder_set_min_length(tsk_ibd_finder_t *self, double min_length);
+
+//     // similar to min_length
+//     int tsk_ibd_finder_set_max_time(tsk_ibd_finder_t *self, double max_time);
+
+//     // debugging utility.
+//     void ibd_finder_print_state(tsk_ibd_finder_t *self, FILE *out);
+
+//     // run it.
+//     int tsk_ibd_finder_run(tsk_ibd_finder_t *ibd_finder);
+//     // free it
+//     int tsk_ibd_finder_free(tsk_ibd_finder_t *ibd_finder);
+
+//     // Return the head of the IBD segment chain for the sample pair at the
+//     // specified index in the input sample pairs. Returns an error if this
+//     // is out of bounds.
+//     int tsk_ibd_finder_get_ibd_segments(tsk_ibd_finder_t *ibd_finder, tsk_id_t
+//         pair_index, tsk_segment_t *ret_ibd_segments_head);
+// }
+
 static void
 test_ibd_finder(void)
 {

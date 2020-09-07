@@ -6745,7 +6745,6 @@ TableCollection_find_ibd(TableCollection *self, PyObject *args, PyObject *kwds)
     shape = PyArray_DIMS(samples_array);
 
     err = tsk_ibd_finder_init_and_run(&ibd_finder, self->tables,
-            self->tables->sequence_length,
             PyArray_DATA(samples_array), (tsk_size_t) shape[0],
             min_length, max_time);
     if (err != 0) {
