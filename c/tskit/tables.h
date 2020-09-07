@@ -700,12 +700,13 @@ typedef struct _tsk_segment_t {
 // Define a struct called ibd_finder_t.
 
 typedef struct {
+    tsk_id_t *pairs;
+    size_t num_pairs;
     tsk_id_t *samples;
     size_t num_samples;
     size_t num_nodes;
     double sequence_length;
     tsk_table_collection_t *tables;
-    size_t num_pairs;
     size_t *sample_id_map;
     tsk_segment_t **ibd_segments_head;
     tsk_segment_t **ibd_segments_tail;

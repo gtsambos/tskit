@@ -5476,31 +5476,53 @@ out:
 // Define functions that initialise the ibd_finder from a table collection/
 // (for now -- need number of samples, which comes from tree seq.)
 static int
-ibd_finder_init_samples(tsk_ibd_finder_t *self, tsk_id_t *samples)
+ibd_finder_init_samples(tsk_ibd_finder_t *self)
 {
     int ret = 0;
     size_t j;
+    tsk_id_t u;
 
-    /* Go through the samples to check for errors. */
-    for (j = 0; j < self->num_samples; j++) {
-        if (samples[j] < 0 || samples[j] > (tsk_id_t) self->tables->nodes.num_rows) {
+    /* Go through the sample pairs to define samples. */
+    for (j = 0; j < 2*self->num_pairs; j++) {
+        u = self->pairs[j];
+
+        // Maybe some of these checks should happen in the Python interface instead?
+        if (u < 0 || u > (tsk_id_t) self->tables->nodes.num_rows) {
             ret = TSK_ERR_NODE_OUT_OF_BOUNDS;
-            goto out;
-        }
-        if (self->is_sample[samples[j]]) {
-            ret = TSK_ERR_DUPLICATE_SAMPLE;
-            goto out;
-        }
-        self->is_sample[samples[j]] = true;
-        ret = ibd_finder_add_ancestry(
-            self, samples[j], 0, self->tables->sequence_length, samples[j]);
-        if (ret != 0) {
-            goto out;
+            goto out;         
         }
 
-        // Initialise the sample id map.
-        self->sample_id_map[samples[j]] = j;
+        if (!self->is_sample[u]) {
+            self->is_sample[u] = true;
+            ret = ibd_finder_add_ancestry(
+                self, u, 0, self->tables->sequence_length, u);
+            if (ret != 0) {
+                goto out;
+            }
+            // Initialise the sample id map and sample list.
+            self->samples[j] = u;
+            self->sample_id_map[u] = j;
+        }
     }
+    // for (j = 0; j < self->num_samples; j++) {
+    //     if (samples[j] < 0 || samples[j] > (tsk_id_t) self->tables->nodes.num_rows) {
+    //         ret = TSK_ERR_NODE_OUT_OF_BOUNDS;
+    //         goto out;
+    //     }
+    //     if (self->is_sample[samples[j]]) {
+    //         ret = TSK_ERR_DUPLICATE_SAMPLE;
+    //         goto out;
+    //     }
+    //     self->is_sample[samples[j]] = true;
+    //     ret = ibd_finder_add_ancestry(
+    //         self, samples[j], 0, self->tables->sequence_length, samples[j]);
+    //     if (ret != 0) {
+    //         goto out;
+    //     }
+
+    //     // Initialise the sample id map.
+    //     self->sample_id_map[samples[j]] = j;
+    // }
 out:
     return ret;
 }
@@ -5533,30 +5555,34 @@ ibd_finder_init_oldest_parents(tsk_ibd_finder_t *self)
 }
 
 static int
-ibd_finder_init(tsk_ibd_finder_t *self, tsk_id_t *samples, size_t num_samples,
+ibd_finder_init(tsk_ibd_finder_t *self, tsk_id_t *pairs, size_t num_pairs,
+    // tsk_id_t *samples, size_t num_samples,
     tsk_table_collection_t *tables)
 {
     int ret = 0;
     size_t num_nodes_alloc;
 
     memset(self, 0, sizeof(tsk_ibd_finder_t));
-    self->samples = samples;
-    self->num_samples = num_samples;
+    // self->samples = samples;
+    // self->num_samples = num_samples;
+    self->pairs = pairs;
+    self->num_pairs = num_pairs;
+    // Should this assertion go here?
     self->sequence_length = tables->sequence_length;
     self->num_nodes = tables->nodes.num_rows;
     self->tables = tables;
-    self->num_pairs = num_samples * (num_samples - 1) / 2;
+    // self->num_pairs = num_samples * (num_samples - 1) / 2;
 
-    if (samples == NULL || num_samples == 0 || self->num_pairs < 1) {
+    if (pairs == NULL || num_pairs < 1) {
         ret = TSK_ERR_NO_SAMPLE_PAIRS;
-        printf("failure 2");
         goto out;
     }
+    // Do we need something like this here, or in the Python interface? 
+    // assert(sizeof(*pairs)/sizeof(pairs[0]) == 2*sizeof(num_pairs)/sizeof(size_t));
 
     // Allocate the heaps used for small objects.
     ret = tsk_blkalloc_init(&self->segment_heap, 8192);
     if (ret != 0) {
-        printf("failure 4");
         goto out;
     }
 
@@ -5567,6 +5593,7 @@ ibd_finder_init(tsk_ibd_finder_t *self, tsk_id_t *samples, size_t num_samples,
     self->ibd_segments_head = calloc(self->num_pairs, sizeof(tsk_segment_t *));
     self->ibd_segments_tail = calloc(self->num_pairs, sizeof(tsk_segment_t *));
     self->sample_id_map = malloc(num_nodes_alloc * sizeof(tsk_id_t));
+    self->samples = malloc(num_nodes_alloc * sizeof(tsk_id_t));
     self->is_sample = calloc(num_nodes_alloc, sizeof(bool));
     self->segment_queue_size = 0;
     self->max_segment_queue_size = 64;
@@ -5577,16 +5604,13 @@ ibd_finder_init(tsk_ibd_finder_t *self, tsk_id_t *samples, size_t num_samples,
         || self->sample_id_map == NULL || self->is_sample == NULL
         || self->segment_queue == NULL) {
         ret = TSK_ERR_NO_MEMORY;
-    printf("failure 5");
         goto out;
     }
 
     // Do we need the below? Seems like no?
     // memset(self->sample_id_map, 0xff, self->tables.nodes.num_rows * sizeof(tsk_id_t));
-    // Initialise the ibd_finder output.
-    ret = ibd_finder_init_samples(self, samples);
+    ret = ibd_finder_init_samples(self);
     if (ret != 0) {
-        printf("failure 6");
         goto out;
     }
 
@@ -5631,12 +5655,8 @@ tsk_ibd_finder_init_and_run(tsk_ibd_finder_t *ibd_finder, tsk_table_collection_t
 {
     int ret = 0;
 
-    ret = ibd_finder_init(
-        ibd_finder, samples, num_samples, tables
-        // min_length, max_time
-        );
+    ret = ibd_finder_init(ibd_finder, samples, num_samples, tables);
     if (ret != 0) {
-        printf("failure 1");
         goto out;
     }
 
@@ -5689,30 +5709,48 @@ out:
     return ret;
 }
 
+// static int
+// ibd_finder_find_sample_pair_index(
+//     tsk_ibd_finder_t *self, tsk_id_t sample0, tsk_id_t sample1)
+// {
+//     float pair_index = -1;
+//     size_t index0, index1;
+
+//     // Ensure the sample pairs are in order.
+//     if (sample0 >= sample1) {
+//         goto out;
+//     }
+
+//     index0 = self->sample_id_map[sample0];
+//     index1 = self->sample_id_map[sample1];
+//     pair_index = ((float) self->num_samples) * ((float) self->num_samples - 1) / 2
+//                  - ((float) self->num_samples - (float) index0)
+//                        * ((float) self->num_samples - (float) index0 - 1) / 2
+//                  + (float) index1 - (float) index0 - 1;
+
+//     // Check the result is an integer before converting it.
+//     assert(ceilf(pair_index) == pair_index);
+
+// out:
+//     return (int) pair_index;
+// }
+
 static int
-ibd_finder_find_sample_pair_index(
+ibd_finder_find_sample_pair_index2(
     tsk_ibd_finder_t *self, tsk_id_t sample0, tsk_id_t sample1)
 {
-    float pair_index = -1;
-    size_t index0, index1;
-
-    // Ensure the sample pairs are in order.
-    if (sample0 >= sample1) {
-        goto out;
+    int i = 0;
+    while (i < (int) self->num_pairs) {
+        if ((((int) self->pairs[2*i] == (int) sample0) && ((int) self->pairs[2*i + 1] == (int) sample1)) || (((int) self->pairs[2*i] == (int) sample1) && ((int) self->pairs[2*i + 1] == (int) sample0))) {
+            break;
+        }
+        i++;
     }
-
-    index0 = self->sample_id_map[sample0];
-    index1 = self->sample_id_map[sample1];
-    pair_index = ((float) self->num_samples) * ((float) self->num_samples - 1) / 2
-                 - ((float) self->num_samples - (float) index0)
-                       * ((float) self->num_samples - (float) index0 - 1) / 2
-                 + (float) index1 - (float) index0 - 1;
-
-    // Check the result is an integer before converting it.
-    assert(ceilf(pair_index) == pair_index);
-
-out:
-    return (int) pair_index;
+    if (i < (int) self->num_pairs) {
+        return i;
+    } else {
+        return -1;
+    }
 }
 
 static int TSK_WARN_UNUSED
@@ -5737,6 +5775,17 @@ ibd_finder_calculate_ibd(tsk_ibd_finder_t *self, tsk_id_t current_parent)
              seg0 = seg0->next) {
             for (j = 0; j != (int) self->segment_queue_size; j++) {
                 seg1 = &self->segment_queue[j];
+                if (seg0->node == seg1->node) {
+                    continue;
+                }
+                ret = ibd_finder_find_sample_pair_index2(
+                    self, seg0->node, seg1->node);
+                if (ret < 0) {
+                    continue;
+                }
+                pair_index = ret;
+
+
                 if (seg0->left > seg1->left) {
                     l = seg0->left;
                 } else {
@@ -5750,22 +5799,19 @@ ibd_finder_calculate_ibd(tsk_ibd_finder_t *self, tsk_id_t current_parent)
 
                 if (l < r) {
                     if (r - l > self->min_length) {
-                        if (seg0->node < seg1->node) {
-                            ret = ibd_finder_find_sample_pair_index(
-                                self, seg0->node, seg1->node);
-                        } else {
-                            ret = ibd_finder_find_sample_pair_index(
-                                self, seg1->node, seg0->node);
-                        }
-                        if (ret < 0) {
-                            goto out;
-                        }
-                        pair_index = ret;
                         ret = ibd_finder_add_output(
                             self, l, r, current_parent, pair_index);
                         if (ret != 0) {
                             goto out;
                         }
+                        // printf("pair index: %i\n", (int) pair_index);
+                        // printf("pair: %i %i\n", seg0->node, seg1->node);
+                        // printf("existing IBD seg nodes: ");
+                        // if (self->ibd_segments_head[pair_index] != NULL) {
+                        //     printf("head node: %i\n", (int) self->ibd_segments_head[pair_index]->node);
+                        //     printf("tail node: %i\n", (int) self->ibd_segments_tail[pair_index]->node);
+                        // }
+                        // // printf("new interval: (%f, %f; %i)\n", l, r, (int) current_parent);
                     }
                 }
             }
@@ -5788,7 +5834,7 @@ out:
 void
 ibd_finder_print_state(tsk_ibd_finder_t *self, FILE *out)
 {
-    size_t j, k, ind;
+    size_t j;
     tsk_segment_t *u = NULL;
 
     fprintf(out, "--ibd-finder stats--\n");
@@ -5802,11 +5848,17 @@ ibd_finder_print_state(tsk_ibd_finder_t *self, FILE *out)
     for (j = 0; j < self->tables->nodes.num_rows; j++) {
         fprintf(out, "ID:%f, Time:%f, Flag:%d\n", (double) j,
             self->tables->nodes.time[j], self->tables->nodes.flags[j]);
-        // self->tables->edges.child[j]);
     }
     fprintf(out, "==\nOldest parents\n==\n");
     for (j = 0; j < self->tables->nodes.num_rows; j++) {
         printf("For node %d: %d\n", (int) j, self->oldest_parent[j]);
+    }
+    fprintf(out, "==\nSample pairs\n==\n");
+    for (j = 0; j < 2*self->num_pairs; j++) {
+        printf("%i ", (int) self->pairs[j]);
+        if (j % 2 != 0) {
+            printf("\n");
+        }
     }
     fprintf(out, "===\nAncestral map\n==\n");
     for (j = 0; j < self->tables->nodes.num_rows; j++) {
@@ -5816,18 +5868,14 @@ ibd_finder_print_state(tsk_ibd_finder_t *self, FILE *out)
         }
         fprintf(out, "\n");
     }
-    fprintf(out, "===\nIBD segments\n==\n");
-    ind = 0;
-    for (j = 0; j < self->num_samples - 1; j++) {
-        for (k = j + 1; k < self->num_samples; k++) {
-            fprintf(
-                out, "Pair (%i, %i)\n", (int) self->samples[j], (int) self->samples[k]);
-            for (u = self->ibd_segments_head[ind]; u != NULL; u = u->next) {
-                fprintf(out, "(%f,%f->%d)", u->left, u->right, u->node);
-            }
-            fprintf(out, "\n");
-            ind++;
-        }
+    fprintf(out, "===\nIBD segments\n===\n");
+    for (j = 0; j < self->num_pairs; j++) {
+        fprintf(
+            out, "Pair (%i, %i)\n", (int) self->pairs[2*j], (int) self->pairs[2*j+1]);
+        for (u = self->ibd_segments_head[j]; u != NULL; u = u->next) {
+            fprintf(out, "(%f,%f->%d)", u->left, u->right, u->node);
+        }  
+        fprintf(out, "\n");      
     }
 }
 
@@ -5930,6 +5978,7 @@ tsk_ibd_finder_run(tsk_ibd_finder_t *self)
     }
 
 out:
+    ibd_finder_print_state(self, stdout);
     return ret;
 }
 
@@ -5942,6 +5991,7 @@ tsk_ibd_finder_free(tsk_ibd_finder_t *self)
     tsk_safe_free(self->ibd_segments_tail);
     tsk_blkalloc_free(&self->segment_heap);
     tsk_safe_free(self->is_sample);
+    tsk_safe_free(self->samples);
     tsk_safe_free(self->sample_id_map);
     tsk_safe_free(self->ancestor_map_head);
     tsk_safe_free(self->ancestor_map_tail);
