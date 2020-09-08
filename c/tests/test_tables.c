@@ -2893,9 +2893,9 @@ test_ibd_finder(void)
     tsk_table_collection_t tables;
     tsk_id_t samples[] = { 0, 1 };
     tsk_ibd_finder_t ibd_finder;
-    double true_left[] = {0.0};
-    double true_right[] = {1.0};
-    tsk_id_t true_node[] = {4};
+    double true_left[] = { 0.0 };
+    double true_right[] = { 1.0 };
+    tsk_id_t true_node[] = { 4 };
     tsk_segment_t *segs_out = NULL;
     tsk_segment_t *u = NULL;
 
@@ -2924,7 +2924,7 @@ test_ibd_finder(void)
             CU_ASSERT_EQUAL_FATAL(u->right, true_right[k]);
             CU_ASSERT_EQUAL_FATAL(u->node, true_node[k]);
             k++;
-        }  
+        }
     }
 
     // Free.
@@ -2943,9 +2943,9 @@ test_ibd_finder_multiple_trees(void)
     tsk_table_collection_t tables;
     tsk_id_t samples[] = { 0, 1, 0, 2 };
     tsk_ibd_finder_t ibd_finder;
-    double true_left[2][2] = {{0.0, 0.7}, {0.7, 0.0}};
-    double true_right[2][2] = {{0.7, 1.0}, {1.0, 0.7}};
-    double true_node[2][2] = {{4, 5}, {5, 6}};
+    double true_left[2][2] = { { 0.0, 0.7 }, { 0.7, 0.0 } };
+    double true_right[2][2] = { { 0.7, 1.0 }, { 1.0, 0.7 } };
+    double true_node[2][2] = { { 4, 5 }, { 5, 6 } };
     tsk_segment_t *segs_out = NULL;
     tsk_segment_t *u = NULL;
 
@@ -2991,9 +2991,9 @@ test_ibd_finder_min_length_max_time(void)
     tsk_table_collection_t tables;
     tsk_id_t samples[] = { 0, 1, 1, 2, 2, 0 };
     tsk_ibd_finder_t ibd_finder;
-    double true_left[3][1] = {{0.0}, {-1}, {-1}};
-    double true_right[3][1] = {{0.7}, {-1}, {-1}};
-    double true_node[3][1] = {{4}, {-1}, {-1}};
+    double true_left[3][1] = { { 0.0 }, { -1 }, { -1 } };
+    double true_right[3][1] = { { 0.7 }, { -1 }, { -1 } };
+    double true_node[3][1] = { { 4 }, { -1 }, { -1 } };
     tsk_segment_t *segs_out = NULL;
     tsk_segment_t *u = NULL;
 
@@ -3042,7 +3042,7 @@ test_ibd_finder_errors(void)
     tsk_id_t samples[] = { 0, 1, 2, 0 };
     // tsk_id_t samples1[] = { 0, 0 };
     tsk_id_t samples2[] = { -1, 1 };
-    tsk_id_t samples3[] = {0};
+    tsk_id_t samples3[] = { 0 };
     tsk_ibd_finder_t ibd_finder;
 
     tsk_treeseq_from_text(&ts, 2, multiple_tree_ex_nodes, multiple_tree_ex_edges, NULL,

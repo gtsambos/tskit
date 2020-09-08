@@ -1,12 +1,12 @@
 # MIT License
 #
-# Copyright (c) 2018-2020 Tskit Developers
-# Copyright (c) 2015-2018 University of Oxford
+# Copyright(c) 2018 - 2020 Tskit Developers
+# Copyright(c) 2015 - 2018 University of Oxford
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
+# of this software and associated documentation files(the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# to use, copy, modify, merge, publish, distribute, sublicense, and / or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
@@ -15,7 +15,7 @@
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
 # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
@@ -201,8 +201,8 @@ class Simplifier:
             right_index = np.searchsorted(X, right)
             # Find the smallest site position index greater than or equal to left
             # and right, i.e., slide each endpoint of an interval to the right
-            # until they hit a site position. If both left and right map to the
-            # the same position then we discard this edge. We also discard an
+            # until they hit a site position.If both left and right map to the
+            # the same position then we discard this edge.We also discard an
             # edge if left = 0 and right is less than the first site position.
             if left_index == right_index or (left_index == 0 and right_index == 1):
                 return
@@ -361,7 +361,7 @@ class Simplifier:
                 x = x.next
         # Note - we had some code to defragment segments in the output
         # chain here, but couldn't find an example where it needed to
-        # be called. So, looks like squashing isn't necessary here.
+        # be called.So, looks like squashing isn't necessary here.
         self.A_head[edge.child] = x_head
         self.A_tail[edge.child] = x_prev
         return S
@@ -379,7 +379,7 @@ class Simplifier:
         self.check_state()
 
     def finalise_sites(self):
-        # Build a map from the old mutation IDs to new IDs. Any mutation that
+        # Build a map from the old mutation IDs to new IDs.Any mutation that
         # has not been mapped to a node in the new tree sequence will be removed.
         mutation_id_map = [-1 for _ in range(self.num_mutations)]
         num_output_mutations = 0
@@ -468,7 +468,7 @@ class Simplifier:
             population=population_id_map[nodes.population],
         )
 
-        # We don't support migrations for now. We'll need to remap these as well.
+        # We don 't support migrations for now. We' ll need to remap these as well.
         assert self.ts.num_migrations == 0
 
     def insert_input_roots(self):
@@ -490,7 +490,7 @@ class Simplifier:
                     youngest_root_time = root_time
         # We have to sort the edge table from the point where the edges
         # for the youngest root would be inserted.
-        # Note: it would be nicer to do the sort here, but we have to
+        # Note : it would be nicer to do the sort here, but we have to
         # wait until the finalise_references method has been called to
         # make sure all the populations etc have been setup.
         node_time = self.tables.nodes.time
@@ -637,7 +637,7 @@ class AncestorMap:
             else:
                 for x in X:
                     ancestry_node = x.node
-                    # Add sample ancestry for the currently-processed segment set.
+                    # Add sample ancestry for the currently - processed segment set.
                     self.add_ancestry(left, right, ancestry_node, input_id)
             prev_right = right
 
@@ -728,7 +728,7 @@ class AncestorMap:
 
 
 if __name__ == "__main__":
-    # Simple CLI for running simplifier/ancestor mapping above.
+    # Simple CLI for running simplifier / ancestor mapping above.
     class_to_implement = sys.argv[1]
     assert class_to_implement == "Simplifier" or class_to_implement == "AncestorMap"
     ts = tskit.load(sys.argv[2])

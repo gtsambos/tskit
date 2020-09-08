@@ -2775,12 +2775,11 @@ int tsk_ibd_finder_init_and_run(tsk_ibd_finder_t *ibd_finder,
 int tsk_ibd_finder_run(tsk_ibd_finder_t *ibd_finder);
 void ibd_finder_print_state(tsk_ibd_finder_t *self, FILE *out);
 
-
 // new additions:
 int tsk_ibd_finder_set_min_length(tsk_ibd_finder_t *self, double min_length);
 int tsk_ibd_finder_set_max_time(tsk_ibd_finder_t *self, double max_time);
-int tsk_ibd_finder_get_ibd_segments(tsk_ibd_finder_t *ibd_finder, tsk_id_t
-    pair_index, tsk_segment_t *ret_ibd_segments_head);
+int tsk_ibd_finder_get_ibd_segments(tsk_ibd_finder_t *ibd_finder, tsk_id_t pair_index,
+    tsk_segment_t *ret_ibd_segments_head);
 /* JK Here's the interface we want:
 
 // sample_pairs must be of length 2 x num_sample_pairs, and each of the

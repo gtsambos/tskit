@@ -1,11 +1,11 @@
 # MIT License
 #
-# Copyright (c) 2020 Tskit Developers
+# Copyright(c) 2020 Tskit Developers
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
+# of this software and associated documentation files(the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# to use, copy, modify, merge, publish, distribute, sublicense, and / or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
@@ -14,7 +14,7 @@
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
 # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
@@ -54,7 +54,7 @@ class Segment:
         return repr((self.left, self.right, self.node))
 
     def __eq__(self, other):
-        # NOTE: to simplify tests, we DON'T check for equality of 'next'.
+        # NOTE : to simplify tests, we DON 'T check for equality of ' next'.
         return (
             self.left == other.left
             and self.right == other.right
@@ -135,7 +135,7 @@ class IbdFinder:
 
         self.ts = ts
 
-        # Note: samples *must* be in order of ascending node ID
+        # Note : samples *must *be in order of ascending node ID
 
         if sample_pairs is None:
             self.compute_all_pairs = True
@@ -167,11 +167,11 @@ class IbdFinder:
 
         self.oldest_parent = self.get_oldest_parents()
 
-        # Objects below are needed for the IBD segment-holding object.
+        # Objects below are needed for the IBD segment - holding object.
 
-        # Note: in the C code the object below should be a struct array.
+        # Note : in the C code the object below should be a struct array.
         # Each item will be accessed using its index, which corresponds to a particular
-        # sample pair. The mapping between index and sample pair is defined in the
+        # sample pair.The mapping between index and sample pair is defined in the
         # find_sample_pair_index method further down.
 
         self.ibd_segments = {}
@@ -193,7 +193,7 @@ class IbdFinder:
     def add_ibd_segments(self, index, seg):
         # index = self.find_sample_pair_index(sample0, sample1)
 
-        # Note: the code below is specific to the Python implementation, where the
+        # Note : the code below is specific to the Python implementation, where the
         # output is a dictionary indexed by sample pairs.
         # In the C implementation, it'll be more like
         # self.ibd_segments[index].add(seg)

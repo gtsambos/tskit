@@ -5483,19 +5483,18 @@ ibd_finder_init_samples(tsk_ibd_finder_t *self)
     tsk_id_t u;
 
     /* Go through the sample pairs to define samples. */
-    for (j = 0; j < 2*self->num_pairs; j++) {
+    for (j = 0; j < 2 * self->num_pairs; j++) {
         u = self->pairs[j];
 
         // Maybe some of these checks should happen in the Python interface instead?
         if (u < 0 || u > (tsk_id_t) self->tables->nodes.num_rows) {
             ret = TSK_ERR_NODE_OUT_OF_BOUNDS;
-            goto out;         
+            goto out;
         }
 
         if (!self->is_sample[u]) {
             self->is_sample[u] = true;
-            ret = ibd_finder_add_ancestry(
-                self, u, 0, self->tables->sequence_length, u);
+            ret = ibd_finder_add_ancestry(self, u, 0, self->tables->sequence_length, u);
             if (ret != 0) {
                 goto out;
             }
@@ -5577,7 +5576,7 @@ ibd_finder_init(tsk_ibd_finder_t *self, tsk_id_t *pairs, size_t num_pairs,
         ret = TSK_ERR_NO_SAMPLE_PAIRS;
         goto out;
     }
-    // Do we need something like this here, or in the Python interface? 
+    // Do we need something like this here, or in the Python interface?
     // assert(sizeof(*pairs)/sizeof(pairs[0]) == 2*sizeof(num_pairs)/sizeof(size_t));
 
     // Allocate the heaps used for small objects.
@@ -5636,7 +5635,7 @@ int TSK_WARN_UNUSED
 tsk_ibd_finder_set_max_time(tsk_ibd_finder_t *self, double max_time)
 {
     int ret = 0;
-    
+
     if (max_time == 0) {
         self->max_time = DBL_MAX;
     } else {
@@ -5669,7 +5668,6 @@ tsk_ibd_finder_init_and_run(tsk_ibd_finder_t *ibd_finder, tsk_table_collection_t
         goto out;
     }
 
-    // Find the IBD segments...
     ret = tsk_ibd_finder_run(ibd_finder);
     if (ret != 0) {
         goto out;
@@ -5741,7 +5739,10 @@ ibd_finder_find_sample_pair_index2(
 {
     int i = 0;
     while (i < (int) self->num_pairs) {
-        if ((((int) self->pairs[2*i] == (int) sample0) && ((int) self->pairs[2*i + 1] == (int) sample1)) || (((int) self->pairs[2*i] == (int) sample1) && ((int) self->pairs[2*i + 1] == (int) sample0))) {
+        if ((((int) self->pairs[2 * i] == (int) sample0)
+                && ((int) self->pairs[2 * i + 1] == (int) sample1))
+            || (((int) self->pairs[2 * i] == (int) sample1)
+                   && ((int) self->pairs[2 * i + 1] == (int) sample0))) {
             break;
         }
         i++;
@@ -5778,13 +5779,11 @@ ibd_finder_calculate_ibd(tsk_ibd_finder_t *self, tsk_id_t current_parent)
                 if (seg0->node == seg1->node) {
                     continue;
                 }
-                ret = ibd_finder_find_sample_pair_index2(
-                    self, seg0->node, seg1->node);
+                ret = ibd_finder_find_sample_pair_index2(self, seg0->node, seg1->node);
                 if (ret < 0) {
                     continue;
                 }
                 pair_index = ret;
-
 
                 if (seg0->left > seg1->left) {
                     l = seg0->left;
@@ -5824,8 +5823,8 @@ out:
 }
 
 int TSK_WARN_UNUSED
-tsk_ibd_finder_get_ibd_segments(tsk_ibd_finder_t *self, tsk_id_t
-    pair_index, tsk_segment_t *ret_ibd_segments_head)
+tsk_ibd_finder_get_ibd_segments(
+    tsk_ibd_finder_t *self, tsk_id_t pair_index, tsk_segment_t *ret_ibd_segments_head)
 {
     int ret = 0;
     if (((int) pair_index < 0) || ((int) pair_index >= (int) self->num_pairs)) {
@@ -5868,7 +5867,7 @@ ibd_finder_print_state(tsk_ibd_finder_t *self, FILE *out)
         printf("For node %d: %d\n", (int) j, self->oldest_parent[j]);
     }
     fprintf(out, "==\nSample pairs\n==\n");
-    for (j = 0; j < 2*self->num_pairs; j++) {
+    for (j = 0; j < 2 * self->num_pairs; j++) {
         printf("%i ", (int) self->pairs[j]);
         if (j % 2 != 0) {
             printf("\n");
@@ -5884,12 +5883,12 @@ ibd_finder_print_state(tsk_ibd_finder_t *self, FILE *out)
     }
     fprintf(out, "===\nIBD segments\n===\n");
     for (j = 0; j < self->num_pairs; j++) {
-        fprintf(
-            out, "Pair (%i, %i)\n", (int) self->pairs[2*j], (int) self->pairs[2*j+1]);
+        fprintf(out, "Pair (%i, %i)\n", (int) self->pairs[2 * j],
+            (int) self->pairs[2 * j + 1]);
         for (u = self->ibd_segments_head[j]; u != NULL; u = u->next) {
             fprintf(out, "(%f,%f->%d)", u->left, u->right, u->node);
-        }  
-        fprintf(out, "\n");      
+        }
+        fprintf(out, "\n");
     }
 }
 
