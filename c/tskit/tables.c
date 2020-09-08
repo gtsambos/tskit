@@ -5804,14 +5804,6 @@ ibd_finder_calculate_ibd(tsk_ibd_finder_t *self, tsk_id_t current_parent)
                         if (ret != 0) {
                             goto out;
                         }
-                        // printf("pair index: %i\n", (int) pair_index);
-                        // printf("pair: %i %i\n", seg0->node, seg1->node);
-                        // printf("existing IBD seg nodes: ");
-                        // if (self->ibd_segments_head[pair_index] != NULL) {
-                        //     printf("head node: %i\n", (int) self->ibd_segments_head[pair_index]->node);
-                        //     printf("tail node: %i\n", (int) self->ibd_segments_tail[pair_index]->node);
-                        // }
-                        // // printf("new interval: (%f, %f; %i)\n", l, r, (int) current_parent);
                     }
                 }
             }
@@ -5826,6 +5818,28 @@ ibd_finder_calculate_ibd(tsk_ibd_finder_t *self, tsk_id_t current_parent)
         }
     }
     self->segment_queue_size = 0;
+
+out:
+    return ret;
+}
+
+int TSK_WARN_UNUSED
+tsk_ibd_finder_get_ibd_segments(tsk_ibd_finder_t *self, tsk_id_t
+    pair_index, tsk_segment_t *ret_ibd_segments_head)
+{
+    int ret = 0;
+    if (((int) pair_index < 0) || ((int) pair_index >= (int) self->num_pairs)) {
+        ret = TSK_ERR_NO_SAMPLE_PAIRS;
+        goto out;
+    }
+    if (self->ibd_segments_head[pair_index] != NULL) {
+        ret_ibd_segments_head->left = self->ibd_segments_head[pair_index]->left;
+        ret_ibd_segments_head->right = self->ibd_segments_head[pair_index]->right;
+        ret_ibd_segments_head->node = self->ibd_segments_head[pair_index]->node;
+        ret_ibd_segments_head->next = self->ibd_segments_head[pair_index]->next;
+    } else {
+        ret = -1;
+    }
 
 out:
     return ret;

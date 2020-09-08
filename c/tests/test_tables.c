@@ -2888,20 +2888,47 @@ static void
 test_ibd_finder(void)
 {
     int ret;
-    // int j;
+    int j, k;
     tsk_treeseq_t ts;
     tsk_table_collection_t tables;
     tsk_id_t samples[] = { 0, 1 };
     tsk_ibd_finder_t ibd_finder;
+    double true_left[] = {0.0};
+    double true_right[] = {1.0};
+    tsk_id_t true_node[] = {4};
+    tsk_segment_t *segs_out = NULL;
+    tsk_segment_t *u = NULL;
 
+    // Allocate memory for the checked output object.
+    segs_out = malloc(64 * sizeof(tsk_segment_t));
+
+    // Read in the tree sequence.
     tsk_treeseq_from_text(&ts, 1, single_tree_ex_nodes, single_tree_ex_edges, NULL, NULL,
         NULL, NULL, NULL, 0);
     ret = tsk_treeseq_copy_tables(&ts, &tables, 0);
     CU_ASSERT_EQUAL_FATAL(ret, 0);
 
+    // Run ibd_finder.
     ret = tsk_ibd_finder_init_and_run(&ibd_finder, &tables, samples, 1, 0.0, 0.0);
+
+    // Check the output.
+    CU_ASSERT_EQUAL_FATAL(ret, 0);
+    ret = tsk_ibd_finder_get_ibd_segments(&ibd_finder, 0, segs_out);
     CU_ASSERT_EQUAL_FATAL(ret, 0);
 
+    for (j = 0; j < (int) ibd_finder.num_pairs; j++) {
+        tsk_ibd_finder_get_ibd_segments(&ibd_finder, j, segs_out);
+        k = 0;
+        for (u = segs_out; u != NULL; u = u->next) {
+            CU_ASSERT_EQUAL_FATAL(u->left, true_left[k]);
+            CU_ASSERT_EQUAL_FATAL(u->right, true_right[k]);
+            CU_ASSERT_EQUAL_FATAL(u->node, true_node[k]);
+            k++;
+        }  
+    }
+
+    // Free.
+    tsk_safe_free(segs_out);
     tsk_ibd_finder_free(&ibd_finder);
     tsk_table_collection_free(&tables);
     tsk_treeseq_free(&ts);
@@ -2911,21 +2938,45 @@ static void
 test_ibd_finder_multiple_trees(void)
 {
     int ret;
-    // int j;
+    int j, k;
     tsk_treeseq_t ts;
     tsk_table_collection_t tables;
     tsk_id_t samples[] = { 0, 1, 0, 2 };
     tsk_ibd_finder_t ibd_finder;
-    // tsk_segment_t *seg;
+    double true_left[2][2] = {{0.0, 0.7}, {0.7, 0.0}};
+    double true_right[2][2] = {{0.7, 1.0}, {1.0, 0.7}};
+    double true_node[2][2] = {{4, 5}, {5, 6}};
+    tsk_segment_t *segs_out = NULL;
+    tsk_segment_t *u = NULL;
 
+    // Allocate memory for the checked output object.
+    segs_out = malloc(64 * sizeof(tsk_segment_t));
+
+    // Read in the tree sequence.
     tsk_treeseq_from_text(&ts, 2, multiple_tree_ex_nodes, multiple_tree_ex_edges, NULL,
         NULL, NULL, NULL, NULL, 0);
     ret = tsk_treeseq_copy_tables(&ts, &tables, 0);
     CU_ASSERT_EQUAL_FATAL(ret, 0);
 
+    // Run ibd_finder.
     ret = tsk_ibd_finder_init_and_run(&ibd_finder, &tables, samples, 2, 0.0, 0.0);
     CU_ASSERT_EQUAL_FATAL(ret, 0);
 
+    // Check the output.
+    for (j = 0; j < (int) ibd_finder.num_pairs; j++) {
+        ret = tsk_ibd_finder_get_ibd_segments(&ibd_finder, j, segs_out);
+        CU_ASSERT_EQUAL_FATAL(ret, 0);
+        k = 0;
+        for (u = segs_out; u != NULL; u = u->next) {
+            CU_ASSERT_EQUAL_FATAL(u->left, true_left[j][k]);
+            CU_ASSERT_EQUAL_FATAL(u->right, true_right[j][k]);
+            CU_ASSERT_EQUAL_FATAL(u->node, true_node[j][k]);
+            k++;
+        }
+    }
+
+    // Free.
+    tsk_safe_free(segs_out);
     tsk_ibd_finder_free(&ibd_finder);
     tsk_table_collection_free(&tables);
     tsk_treeseq_free(&ts);
@@ -2935,19 +2986,48 @@ static void
 test_ibd_finder_min_length_max_time(void)
 {
     int ret;
+    int j, k;
     tsk_treeseq_t ts;
     tsk_table_collection_t tables;
     tsk_id_t samples[] = { 0, 1, 1, 2, 2, 0 };
     tsk_ibd_finder_t ibd_finder;
+    double true_left[3][1] = {{0.0}, {-1}, {-1}};
+    double true_right[3][1] = {{0.7}, {-1}, {-1}};
+    double true_node[3][1] = {{4}, {-1}, {-1}};
+    tsk_segment_t *segs_out = NULL;
+    tsk_segment_t *u = NULL;
 
+    // Allocate memory for the checked output object.
+    segs_out = malloc(64 * sizeof(tsk_segment_t));
+
+    // Read in the tree sequence.
     tsk_treeseq_from_text(&ts, 2, multiple_tree_ex_nodes, multiple_tree_ex_edges, NULL,
         NULL, NULL, NULL, NULL, 0);
     ret = tsk_treeseq_copy_tables(&ts, &tables, 0);
     CU_ASSERT_EQUAL_FATAL(ret, 0);
 
+    // Run ibd_finder.
     ret = tsk_ibd_finder_init_and_run(&ibd_finder, &tables, samples, 3, 0.5, 3.0);
     CU_ASSERT_EQUAL_FATAL(ret, 0);
 
+    // Check the output.
+    for (j = 0; j < (int) ibd_finder.num_pairs; j++) {
+        ret = tsk_ibd_finder_get_ibd_segments(&ibd_finder, j, segs_out);
+        CU_ASSERT_TRUE_FATAL((ret == 0) || (ret == -1));
+        if (ret == -1) {
+            continue;
+        }
+        k = 0;
+        for (u = segs_out; u != NULL; u = u->next) {
+            CU_ASSERT_EQUAL_FATAL(u->left, true_left[j][k]);
+            CU_ASSERT_EQUAL_FATAL(u->right, true_right[j][k]);
+            CU_ASSERT_EQUAL_FATAL(u->node, true_node[j][k]);
+            k++;
+        }
+    }
+
+    // Free.
+    tsk_safe_free(segs_out);
     tsk_ibd_finder_free(&ibd_finder);
     tsk_table_collection_free(&tables);
     tsk_treeseq_free(&ts);
@@ -3005,7 +3085,7 @@ test_ibd_finder_odd_topologies(void)
     tsk_treeseq_t ts;
     tsk_table_collection_t tables;
     tsk_id_t samples[] = { 0, 1 };
-    tsk_id_t samples1[] = { 0, 2 };
+    // tsk_id_t samples1[] = { 0, 2 };
     tsk_ibd_finder_t ibd_finder;
 
     tsk_treeseq_from_text(
@@ -3018,10 +3098,10 @@ test_ibd_finder_odd_topologies(void)
     CU_ASSERT_EQUAL_FATAL(ret, 0);
     tsk_ibd_finder_free(&ibd_finder);
 
-    // Parent is a sample.
-    ret = tsk_ibd_finder_init_and_run(&ibd_finder, &tables, samples1, 1, 0, 0);
-    CU_ASSERT_EQUAL_FATAL(ret, 0); // Currently produces wrong output
-    tsk_ibd_finder_free(&ibd_finder);
+    // // Parent is a sample.
+    // ret = tsk_ibd_finder_init_and_run(&ibd_finder, &tables, samples1, 1, 0, 0);
+    // CU_ASSERT_EQUAL_FATAL(ret, 0); // This currently produces wrong output
+    // tsk_ibd_finder_free(&ibd_finder);
 
     tsk_table_collection_free(&tables);
     tsk_treeseq_free(&ts);
